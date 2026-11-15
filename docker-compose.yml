@@ -1,0 +1,75 @@
+services:
+  api:
+    build: .
+    container_name: knowledge-assistant-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      CHROMA_PATH: /app/data/chroma
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3.2
+    volumes:
+      - chroma_data:/app/data/chroma
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  frontend:
+    build: .
+    container_name: knowledge-assistant-frontend
+    command: streamlit run app/frontend.py --server.address 0.0.0.0 --server.port 8501
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: knowledge-assistant-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: knowledge-assistant-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: knowledge-assistant-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: knowledge-assistant-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+
+volumes:
+  chroma_data:
+  ollama_data:
+  grafana_data:

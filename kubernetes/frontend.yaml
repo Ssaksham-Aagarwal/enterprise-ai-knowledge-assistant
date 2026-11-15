@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: knowledge-assistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: YOUR_DOCKERHUB_USERNAME/enterprise-ai-knowledge-assistant:latest
+          command: ["streamlit", "run", "app/frontend.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
+          ports:
+            - containerPort: 8501
+          envFrom:
+            - configMapRef:
+                name: knowledge-assistant-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: knowledge-assistant
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 8501
+      targetPort: 8501
+  type: NodePort
