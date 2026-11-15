@@ -11,7 +11,11 @@ from chromadb.utils import embedding_functions
 from pypdf import PdfReader
 
 
-CHROMA_PATH = os.getenv("CHROMA_PATH", "/app/data/chroma")
+CHROMA_PATH = os.getenv(
+    "CHROMA_PATH",
+    str(Path(__file__).resolve().parents[2] / "data" / "chroma")
+)
+
 COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "enterprise_documents")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
@@ -40,6 +44,7 @@ def get_collection():
 def extract_pdf_text(pdf_bytes: bytes) -> tuple[str, int]:
     reader = PdfReader(BytesIO(pdf_bytes))
     texts = [page.extract_text() or "" for page in reader.pages]
+
     return "\n".join(texts), len(reader.pages)
 
 
@@ -121,7 +126,6 @@ def retrieve_relevant_chunks(
         raise ValueError("Question cannot be empty.")
 
     collection = get_collection()
-
     count = collection.count()
 
     if count == 0:
